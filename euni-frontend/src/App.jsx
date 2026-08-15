@@ -2,7 +2,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -15,7 +15,6 @@ import Notes from './pages/Notes';
 import Paiements from './pages/Paiements';
 import Messages from './pages/Messages';
 import Bibliotheque from './pages/Bibliotheque';
-import './App.css';
 
 export default function App() {
   const { user } = useAuth();
@@ -89,8 +88,12 @@ export default function App() {
 
   return (
     <NotificationProvider>
-      <Navbar />
-      {routes}
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <main className="flex-1 px-8 py-10 lg:px-12">
+          <div className="mx-auto max-w-5xl">{routes}</div>
+        </main>
+      </div>
     </NotificationProvider>
   );
 }
