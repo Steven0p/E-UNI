@@ -8,6 +8,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const userModel = require('../models/userModel');
 const refreshTokenModel = require('../models/refreshTokenModel');
 const passwordResetModel = require('../models/passwordResetModel');
+const emailService = require('../services/emailService');
 
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
@@ -115,11 +116,15 @@ const forgotPassword = asyncHandler(async (req, res) => {
   await passwordResetModel.create(user.id, token, new Date(Date.now() + RESET_TTL_MS));
 
   const resetLink = `${env.frontendUrl}/reinitialiser-mot-de-passe?token=${token}`;
-  // Aucun service d'e-mail n'est encore branché (SMTP/SES/...) : le lien est journalisé côté
-  // serveur et, hors production, renvoyé directement pour permettre de tester le flux de bout en bout.
-  console.log(`[E-UNI] Lien de réinitialisation pour ${email} : ${resetLink}`);
 
-  if (env.nodeEnv !== 'production') {
+  const sent = await emailService.sendPasswordResetEmail(user.email, resetLink).catch((err) => {
+    console.error("Échec de l'envoi de l'e-mail de réinitialisation :", err.message);
+    return null;
+  });
+
+  // Filet de secours pour le développement : si aucun e-mail n'est parti (service non configuré
+  // ou échec d'envoi), on renvoie quand même le lien pour ne pas bloquer les tests hors production.
+  if (!sent && env.nodeEnv !== 'production') {
     return res.json({ message: GENERIC_FORGOT_MESSAGE, resetToken: token, resetLink });
   }
 
