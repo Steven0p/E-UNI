@@ -1,47 +1,170 @@
 # E-UNI — Espace Numérique Universitaire
-## Cahier des charges / Spécification fonctionnelle et technique
+## Spécification des exigences logicielles (SRS)
 
-**Version 1.0 — Août 2026**
+**Version 2.0 — Août 2026**
 **Porteur du projet :** Infinity Code — Port-au-Prince, Haïti
+**Statut :** Document de référence pour la conception, le développement et la recevabilité du produit.
 
 ---
 
-## 1. Contexte et objectifs
+## 1. Introduction
 
-E-UNI (Espace Numérique Universitaire) est une plateforme numérique destinée aux institutions
-universitaires haïtiennes. Elle centralise, dans un espace unique :
+### 1.1 Objet du document
 
-- la gestion des cours et programmes académiques ;
+Ce document spécifie les exigences fonctionnelles et non fonctionnelles de la plateforme **E-UNI**
+(Espace Numérique Universitaire). Il sert de référence unique pour l'équipe de développement, les
+testeurs et les parties prenantes de l'institution universitaire cliente, afin de garantir une
+compréhension commune de ce que le produit doit faire — et de ce qu'il ne doit pas faire — avant et
+pendant la construction.
+
+### 1.2 Périmètre du produit
+
+E-UNI est une plateforme web qui centralise pour une institution universitaire haïtienne :
+
+- la gestion des programmes académiques et des cours ;
 - le suivi des notes et évaluations ;
-- le paiement des frais académiques via **MonCash** (Digicel) ;
+- le paiement des frais académiques via MonCash (Digicel) ;
 - la communication interne (messagerie et notifications) ;
-- une bibliothèque de ressources numériques accessible aux étudiants et enseignants.
-
-### 1.1 Objectifs
-
-| # | Objectif |
-|---|----------|
-| O1 | Digitaliser la gestion académique (cours, programmes, notes, évaluations) |
-| O2 | Faciliter le paiement des frais universitaires via MonCash, adapté au contexte haïtien |
-| O3 | Améliorer la communication entre administration, enseignants et étudiants |
-| O4 | Offrir un accès centralisé aux ressources pédagogiques numériques |
-| O5 | Fonctionner de manière fiable malgré les contraintes d'infrastructure locales (connectivité limitée) |
-
-### 1.2 Public cible
-
-- **Étudiants** : consultent leurs cours, notes, frais, messages et ressources.
-- **Enseignants** : gèrent leurs cours, créent des évaluations, saisissent des notes, publient des ressources.
-- **Administrateurs** : supervisent programmes, comptes, paiements et statistiques.
+- une bibliothèque de ressources numériques.
 
 ### 1.3 Hors périmètre (v1.0)
 
-- Application mobile native (le web est responsive mais aucune app iOS/Android n'est prévue).
-- Visioconférence / cours en direct.
-- Gestion de la scolarité complète (admissions, diplomation) — v1.0 se limite au cursus courant.
+| Exclu | Raison |
+|---|---|
+| Application mobile native (iOS/Android) | Le front-end web est responsive ; une app native est un chantier séparé |
+| Visioconférence / cours en direct | Nécessite une infrastructure et des coûts distincts, non requis en v1.0 |
+| Admissions et diplomation | Le périmètre se limite à la gestion du cursus courant (cours, notes, paiement) |
+| Multi-établissement (multi-tenant) | v1.0 cible une seule institution ; le multi-tenant est une évolution possible |
+
+### 1.4 Définitions et acronymes
+
+| Terme | Définition |
+|---|---|
+| JWT | JSON Web Token — jeton signé utilisé pour authentifier les requêtes |
+| SPA | Single Page Application |
+| RF | Exigence fonctionnelle (Requirement Fonctionnel) |
+| RNF | Exigence non fonctionnelle |
+| Webhook | Notification HTTP automatique envoyée par un service externe (MonCash) |
+| HTG | Gourde haïtienne, devise des transactions |
 
 ---
 
-## 2. Architecture technique
+## 2. Description générale
+
+### 2.1 Parties prenantes et classes d'utilisateurs
+
+| Rôle | Description | Besoins principaux |
+|---|---|---|
+| **Étudiant** | Utilisateur inscrit à un ou plusieurs cours | Consulter cours/notes, payer ses frais, communiquer, accéder aux ressources |
+| **Enseignant** | Responsable d'un ou plusieurs cours | Gérer ses cours, créer des évaluations, saisir des notes, publier des ressources |
+| **Administrateur** | Personnel de l'institution | Superviser programmes, comptes, statistiques de paiement |
+| **Infinity Code (mainteneur)** | Équipe technique | Faire évoluer la plateforme, assurer le support |
+
+### 2.2 Hypothèses et contraintes
+
+- Connectivité internet localement limitée et instable → l'interface doit rester utilisable en
+  connexion lente (paiements et chargements de pages optimisés, messages d'erreur clairs en cas de
+  coupure).
+- Le paiement s'effectue exclusivement via MonCash en v1.0 (pas de carte bancaire).
+- La langue principale de l'interface est le français ; une interface bilingue français/créole est
+  une évolution envisageable mais non requise en v1.0.
+- L'institution fournit ses propres données de programmes/cours lors de la mise en service
+  (pas d'import automatisé prévu en v1.0).
+
+---
+
+## 3. Exigences fonctionnelles
+
+Chaque exigence est identifiée par un code `RF-<module>-<numéro>` et assortie d'un critère
+d'acceptation vérifiable.
+
+### 3.1 Authentification et comptes (RF-AUTH)
+
+| ID | Exigence | Critère d'acceptation |
+|---|---|---|
+| RF-AUTH-1 | Un utilisateur peut créer un compte avec e-mail, mot de passe et rôle | Le compte est créé avec mot de passe haché (bcrypt) ; l'e-mail est unique |
+| RF-AUTH-2 | Un utilisateur peut se connecter avec e-mail + mot de passe | Une connexion valide retourne un token JWT ; une connexion invalide retourne une erreur explicite sans révéler si c'est l'e-mail ou le mot de passe qui est erroné |
+| RF-AUTH-3 | Un utilisateur peut réinitialiser un mot de passe oublié | Un lien/processus de réinitialisation est envoyé à l'e-mail associé au compte |
+| RF-AUTH-4 | Un utilisateur peut se déconnecter | Le token courant est invalidé côté client (et rafraîchissement bloqué côté serveur si applicable) |
+| RF-AUTH-5 | Le tableau de bord affiché après connexion dépend du rôle | Étudiant, enseignant et administrateur voient chacun un contenu de tableau de bord distinct (cf. §3.2) |
+
+### 3.2 Tableau de bord (RF-DASH)
+
+| ID | Exigence | Critère d'acceptation |
+|---|---|---|
+| RF-DASH-1 | L'étudiant voit ses cours inscrits, dernières notes, frais à payer, messages/notifications récentes | Chaque section affiche les données réelles de l'utilisateur connecté, limitées aux N éléments les plus récents |
+| RF-DASH-2 | L'enseignant voit ses cours enseignés, évaluations à corriger, messages des étudiants | Idem, filtré sur les cours dont il est responsable |
+| RF-DASH-3 | L'administrateur voit une vue d'ensemble des programmes, statistiques de paiement, gestion des comptes | Les statistiques agrègent l'ensemble de l'institution |
+
+### 3.3 Cours et programmes académiques (RF-COURS)
+
+| ID | Exigence | Critère d'acceptation |
+|---|---|---|
+| RF-COURS-1 | Un étudiant peut consulter la liste des cours de son programme | La liste reflète les cours réellement rattachés au programme de l'étudiant |
+| RF-COURS-2 | Un étudiant peut consulter le détail d'un cours (description, enseignant, crédits, semestre) | Toutes les informations du cours sont affichées correctement |
+| RF-COURS-3 | Un enseignant/administrateur peut créer, modifier, supprimer un cours | L'opération est refusée (403) si l'utilisateur n'a pas le rôle requis |
+| RF-COURS-4 | Un enseignant/administrateur peut consulter la liste des étudiants inscrits à un cours | La liste correspond exactement aux inscriptions actives |
+
+### 3.4 Notes et évaluations (RF-NOTES)
+
+| ID | Exigence | Critère d'acceptation |
+|---|---|---|
+| RF-NOTES-1 | Un enseignant peut créer une évaluation (type, date, coefficient) pour un cours dont il est responsable | L'évaluation créée est immédiatement visible pour les étudiants inscrits au cours |
+| RF-NOTES-2 | Un enseignant peut saisir/modifier la note d'un étudiant pour une évaluation | La note est bornée à un intervalle valide ; la modification écrase la valeur précédente et journalise la date de mise à jour |
+| RF-NOTES-3 | Un étudiant peut consulter, par cours, sa note à chaque évaluation et sa moyenne | La moyenne est recalculée selon les coefficients des évaluations |
+| RF-NOTES-4 | Une note saisie devient visible à l'étudiant immédiatement | Aucune étape de validation supplémentaire ne retarde l'affichage (l'enseignant doit donc vérifier avant d'enregistrer) |
+
+### 3.5 Paiement des frais académiques — MonCash (RF-PAIE)
+
+| ID | Exigence | Critère d'acceptation |
+|---|---|---|
+| RF-PAIE-1 | Un étudiant peut consulter la liste de ses frais dus (montant, échéance, statut) | Les frais affichés correspondent aux enregistrements `frais_academiques` de l'étudiant |
+| RF-PAIE-2 | Un étudiant peut initier le paiement d'un frais via MonCash | Le back-end génère une transaction MonCash et redirige l'étudiant vers la page de paiement |
+| RF-PAIE-3 | Le statut d'un paiement est confirmé côté serveur, jamais uniquement côté client | Le statut final du paiement provient d'un webhook MonCash ou d'une vérification serveur explicite de la référence de transaction |
+| RF-PAIE-4 | Une fois le paiement confirmé, le frais correspondant passe automatiquement au statut « Payé » | La mise à jour est atomique : `paiements.statut = 'reussi'` implique `frais_academiques` mis à jour dans la même opération logique |
+| RF-PAIE-5 | Chaque tentative de paiement (succès, échec, en attente) est journalisée | Un enregistrement `paiements` existe pour chaque tentative, y compris les échecs |
+| RF-PAIE-6 | En cas d'indisponibilité de l'API MonCash, un mode de secours (paiement manuel avec justificatif) est disponible pour l'administrateur | Un administrateur peut marquer un frais comme payé manuellement, avec traçabilité de qui a effectué l'action |
+
+### 3.6 Communication (RF-COM)
+
+| ID | Exigence | Critère d'acceptation |
+|---|---|---|
+| RF-COM-1 | Un utilisateur peut envoyer un message à un autre utilisateur de la plateforme (étudiant, enseignant, administration) | Le message est stocké et apparaît dans la conversation des deux parties |
+| RF-COM-2 | Un utilisateur peut consulter la liste de ses conversations précédentes | Les conversations sont triées par activité la plus récente |
+| RF-COM-3 | Un utilisateur reçoit une notification pour : nouvelle note, échéance de paiement proche, nouveau message, annonce administrative | Chaque évènement déclencheur génère un enregistrement `notifications` associé au bon utilisateur |
+| RF-COM-4 | Un indicateur visuel (cloche) signale les notifications non lues | Le compteur reflète exactement le nombre de notifications non lues en base |
+
+### 3.7 Bibliothèque / Ressources numériques (RF-RES)
+
+| ID | Exigence | Critère d'acceptation |
+|---|---|---|
+| RF-RES-1 | Un utilisateur peut rechercher une ressource par cours, mot-clé ou catégorie | Les résultats correspondent au critère de recherche saisi |
+| RF-RES-2 | Un utilisateur peut consulter ou télécharger une ressource | Le fichier/lien s'ouvre ou se télécharge sans erreur pour un utilisateur autorisé |
+| RF-RES-3 | Un enseignant peut ajouter une ressource depuis la page de son cours | La ressource ajoutée est immédiatement associée au bon cours et visible par les étudiants inscrits |
+
+---
+
+## 4. Exigences non fonctionnelles
+
+| ID | Catégorie | Exigence |
+|---|---|---|
+| RNF-1 | Sécurité | Mots de passe hachés avec bcrypt ; jamais stockés ni journalisés en clair |
+| RNF-2 | Sécurité | Authentification par JWT à expiration courte, avec mécanisme de rafraîchissement |
+| RNF-3 | Sécurité | Contrôle d'accès par rôle appliqué sur chaque route sensible côté serveur (pas seulement côté UI) |
+| RNF-4 | Sécurité | Limitation du débit (rate limiting) sur les routes d'authentification |
+| RNF-5 | Sécurité | Validation systématique des entrées côté serveur ; requêtes SQL paramétrées (anti-injection) |
+| RNF-6 | Sécurité | HTTPS obligatoire en production ; secrets exclusivement en variables d'environnement, jamais commités |
+| RNF-7 | Fiabilité | Le statut d'un paiement ne doit jamais être déterminé uniquement par une réponse côté client |
+| RNF-8 | Disponibilité | La plateforme doit rester utilisable en conditions de connectivité limitée (réponses API légères, dégradation progressive plutôt que blocage total) |
+| RNF-9 | Performance | Les listes (cours, notes, ressources) doivent se charger de façon paginée pour rester réactives sur connexion lente |
+| RNF-10 | Maintenabilité | Séparation stricte controllers / routes / models / services côté back-end |
+| RNF-11 | Traçabilité | Toute action sensible (paiement, saisie de note, création de compte) doit être horodatée |
+| RNF-12 | Sauvegarde | Sauvegarde régulière et automatisée de la base MySQL |
+| RNF-13 | Portabilité | Le front-end et le back-end sont déployables indépendamment (front sur Vercel, back sur VPS/service Node) |
+
+---
+
+## 5. Architecture technique
 
 Architecture trois-tiers avec séparation front-end / back-end / base de données.
 
@@ -60,8 +183,6 @@ Base de données — MySQL
         └── Service externe : API MonCash (paiements)
 ```
 
-### 2.1 Choix technologiques
-
 | Couche | Technologie | Rôle |
 |---|---|---|
 | Front-end | React.js (+ React Router, Axios) | Interface utilisateur, SPA |
@@ -71,11 +192,7 @@ Base de données — MySQL
 | Paiement | API MonCash (Digicel) | Paiement des frais académiques |
 | Déploiement | Vercel (front) / VPS ou service Node (back) | Hébergement |
 
----
-
-## 3. Structure du projet (cible)
-
-### 3.1 Front-end (`euni-frontend/`)
+### 5.1 Structure du projet (cible)
 
 ```
 euni-frontend/
@@ -92,11 +209,7 @@ euni-frontend/
 │   └── index.jsx
 ├── .env
 └── package.json
-```
 
-### 3.2 Back-end (`euni-backend/`)
-
-```
 euni-backend/
 ├── src/
 │   ├── config/          # db.js, moncash.js, env
@@ -115,9 +228,9 @@ euni-backend/
 
 ---
 
-## 4. Modèle de données (MySQL)
+## 6. Modèle de données (MySQL)
 
-### 4.1 Tables principales
+### 6.1 Tables principales
 
 | Table | Description |
 |---|---|
@@ -133,7 +246,7 @@ euni-backend/
 | `notifications` | Notifications système envoyées aux utilisateurs |
 | `ressources` | Ressources numériques (documents, liens) liées à un cours ou à la bibliothèque |
 
-### 4.2 Détail des colonnes — tables clés
+### 6.2 Détail des colonnes — tables clés
 
 **`utilisateurs`**
 
@@ -175,148 +288,86 @@ euni-backend/
 
 ---
 
-## 5. Spécification fonctionnelle par module
-
-### 5.1 Connexion et compte
-
-- Connexion par e-mail + mot de passe → retourne un token JWT.
-- Récupération de mot de passe oublié.
-- Changement de mot de passe depuis « Profil » → « Sécurité ».
-- Le tableau de bord affiché après connexion dépend du rôle :
-
-| Rôle | Aperçu du tableau de bord |
-|---|---|
-| Étudiant | Cours inscrits, dernières notes, frais à payer, messages et notifications récentes |
-| Enseignant | Cours enseignés, évaluations à corriger, messages des étudiants |
-| Administrateur | Vue d'ensemble des programmes, statistiques des paiements, gestion des comptes |
-
-### 5.2 Cours et programmes académiques
-
-- Étudiant : consulte la liste des cours de son programme, le détail de chaque cours (description,
-  enseignant, crédits, semestre).
-- Enseignant / Administrateur : crée, modifie, supprime un cours ; consulte la liste des étudiants
-  inscrits à un cours.
-
-### 5.3 Notes et évaluations
-
-- Enseignant : crée une évaluation (examen, devoir, contrôle) avec date et coefficient ; saisit les
-  notes des étudiants après correction.
-- Étudiant : consulte, par cours, le détail de ses évaluations, sa note à chacune, et sa moyenne.
-- Contrainte : les notes sont visibles par l'étudiant immédiatement après enregistrement — la saisie
-  doit donc être vérifiée avant validation côté enseignant.
-
-### 5.4 Paiement des frais académiques (MonCash)
-
-1. L'étudiant consulte la liste de ses frais (montant dû, échéance).
-2. Il sélectionne un frais et déclenche le paiement (« Payer avec MonCash »).
-3. Le back-end appelle l'API MonCash pour générer une transaction et redirige l'étudiant vers la
-   page de paiement MonCash.
-4. L'étudiant confirme le paiement avec son numéro MonCash et son code.
-5. MonCash notifie le back-end (webhook) ou le back-end interroge le statut de la transaction.
-6. Le statut est mis à jour dans `paiements` et le frais correspondant passe à « Payé ».
-
-Bonnes pratiques imposées :
-
-- Toujours vérifier le statut d'une transaction **côté serveur** avant de la valider (ne jamais se
-  fier au seul retour côté client).
-- Journaliser chaque tentative de paiement (succès, échec, en attente).
-- Prévoir un mode de secours (paiement manuel avec justificatif) en cas d'indisponibilité de l'API
-  MonCash.
-
-### 5.5 Communication
-
-- Messagerie interne entre étudiant, enseignant et administration (liste de conversations,
-  nouveau message).
-- Notifications système (cloche) : nouvelles notes, échéances de paiement, messages non lus,
-  annonces de l'administration.
-
-### 5.6 Bibliothèque / Ressources numériques
-
-- Recherche de ressources par cours, mot-clé ou catégorie.
-- Consultation / téléchargement d'une ressource.
-- Les enseignants peuvent ajouter des ressources directement depuis la page de leur cours.
-
----
-
-## 6. API REST
+## 7. Interface de programmation (API REST)
 
 Toutes les routes protégées requièrent un jeton JWT transmis dans l'en-tête
 `Authorization: Bearer <token>`.
 
-### 6.1 Authentification
+### 7.1 Authentification
 
-| Méthode | Endpoint | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Création d'un compte utilisateur |
-| POST | `/api/auth/login` | Connexion, retourne un token JWT |
-| POST | `/api/auth/refresh` | Rafraîchissement du token |
-| POST | `/api/auth/logout` | Déconnexion |
+| Méthode | Endpoint | Description | RF associée |
+|---|---|---|---|
+| POST | `/api/auth/register` | Création d'un compte utilisateur | RF-AUTH-1 |
+| POST | `/api/auth/login` | Connexion, retourne un token JWT | RF-AUTH-2 |
+| POST | `/api/auth/refresh` | Rafraîchissement du token | RF-AUTH-2 |
+| POST | `/api/auth/logout` | Déconnexion | RF-AUTH-4 |
 
-### 6.2 Cours et programmes
+### 7.2 Cours et programmes
 
-| Méthode | Endpoint | Description |
-|---|---|---|
-| GET | `/api/cours` | Liste des cours |
-| GET | `/api/cours/:id` | Détail d'un cours |
-| POST | `/api/cours` | Créer un cours (admin/enseignant) |
-| PUT | `/api/cours/:id` | Modifier un cours |
-| DELETE | `/api/cours/:id` | Supprimer un cours |
-| GET | `/api/programmes` | Liste des programmes académiques |
+| Méthode | Endpoint | Description | RF associée |
+|---|---|---|---|
+| GET | `/api/cours` | Liste des cours | RF-COURS-1 |
+| GET | `/api/cours/:id` | Détail d'un cours | RF-COURS-2 |
+| POST | `/api/cours` | Créer un cours (admin/enseignant) | RF-COURS-3 |
+| PUT | `/api/cours/:id` | Modifier un cours | RF-COURS-3 |
+| DELETE | `/api/cours/:id` | Supprimer un cours | RF-COURS-3 |
+| GET | `/api/programmes` | Liste des programmes académiques | RF-COURS-1 |
 
-### 6.3 Notes et évaluations
+### 7.3 Notes et évaluations
 
-| Méthode | Endpoint | Description |
-|---|---|---|
-| GET | `/api/evaluations/cours/:coursId` | Évaluations d'un cours |
-| POST | `/api/evaluations` | Créer une évaluation |
-| POST | `/api/notes` | Saisir/mettre à jour une note |
-| GET | `/api/notes/etudiant/:id` | Relevé de notes d'un étudiant |
+| Méthode | Endpoint | Description | RF associée |
+|---|---|---|---|
+| GET | `/api/evaluations/cours/:coursId` | Évaluations d'un cours | RF-NOTES-1 |
+| POST | `/api/evaluations` | Créer une évaluation | RF-NOTES-1 |
+| POST | `/api/notes` | Saisir/mettre à jour une note | RF-NOTES-2 |
+| GET | `/api/notes/etudiant/:id` | Relevé de notes d'un étudiant | RF-NOTES-3 |
 
-### 6.4 Paiements (MonCash)
+### 7.4 Paiements (MonCash)
 
-| Méthode | Endpoint | Description |
-|---|---|---|
-| GET | `/api/frais/etudiant/:id` | Frais dus par un étudiant |
-| POST | `/api/paiements/initier` | Initier un paiement MonCash |
-| GET | `/api/paiements/verifier/:reference` | Vérifier le statut d'une transaction |
-| POST | `/api/paiements/webhook` | Callback de confirmation MonCash |
+| Méthode | Endpoint | Description | RF associée |
+|---|---|---|---|
+| GET | `/api/frais/etudiant/:id` | Frais dus par un étudiant | RF-PAIE-1 |
+| POST | `/api/paiements/initier` | Initier un paiement MonCash | RF-PAIE-2 |
+| GET | `/api/paiements/verifier/:reference` | Vérifier le statut d'une transaction | RF-PAIE-3 |
+| POST | `/api/paiements/webhook` | Callback de confirmation MonCash | RF-PAIE-3, RF-PAIE-4 |
 
-### 6.5 Communication et ressources
+### 7.5 Communication et ressources
 
-| Méthode | Endpoint | Description |
-|---|---|---|
-| GET | `/api/messages/:userId` | Messages d'un utilisateur |
-| POST | `/api/messages` | Envoyer un message |
-| GET | `/api/notifications/:userId` | Notifications d'un utilisateur |
-| GET | `/api/ressources` | Liste des ressources numériques |
-| POST | `/api/ressources` | Ajouter une ressource |
-
----
-
-## 7. Authentification et sécurité
-
-- Mots de passe hachés avec **bcryptjs** (jamais stockés en clair).
-- Authentification par **JWT** avec expiration courte + mécanisme de rafraîchissement.
-- Middleware de contrôle de rôle (étudiant / enseignant / admin) sur chaque route sensible.
-- Limitation du débit (rate limiting) sur les routes d'authentification pour prévenir les attaques
-  par force brute.
-- Validation systématique des entrées côté serveur (`express-validator` ou équivalent).
-- Connexions à la base de données via requêtes préparées (protection contre les injections SQL).
-- HTTPS obligatoire en production.
-- Variables sensibles (clés MonCash, secrets JWT) stockées dans des variables d'environnement
-  (`.env`), jamais commitées.
+| Méthode | Endpoint | Description | RF associée |
+|---|---|---|---|
+| GET | `/api/messages/:userId` | Messages d'un utilisateur | RF-COM-2 |
+| POST | `/api/messages` | Envoyer un message | RF-COM-1 |
+| GET | `/api/notifications/:userId` | Notifications d'un utilisateur | RF-COM-3 |
+| GET | `/api/ressources` | Liste des ressources numériques | RF-RES-1 |
+| POST | `/api/ressources` | Ajouter une ressource | RF-RES-3 |
 
 ---
 
-## 8. Installation et déploiement
+## 8. Flux critique — Paiement MonCash
 
-### 8.1 Prérequis
+1. L'étudiant sélectionne un frais à régler et déclenche le paiement.
+2. Le back-end appelle l'API MonCash pour générer une transaction et redirige l'étudiant vers la
+   page de paiement MonCash.
+3. L'étudiant confirme le paiement sur son compte MonCash (numéro + code).
+4. MonCash notifie le back-end (webhook) ou le back-end interroge le statut de la transaction.
+5. Le statut du paiement est mis à jour dans `paiements` et le frais correspondant est marqué
+   comme réglé (RF-PAIE-3, RF-PAIE-4).
+
+**Règle non négociable :** le statut « payé » n'est jamais déclaré sur la seule foi d'une réponse
+reçue par le navigateur de l'étudiant — il doit toujours être confirmé par un appel serveur à
+serveur vers MonCash (webhook ou vérification explicite).
+
+---
+
+## 9. Installation et déploiement
+
+### 9.1 Prérequis
 
 - Node.js ≥ 18.x et npm
 - MySQL ≥ 8.0
 - Compte marchand MonCash (clés API sandbox et production)
 
-### 8.2 Installation locale
+### 9.2 Installation locale
 
 ```bash
 # Back-end
@@ -333,7 +384,7 @@ cp .env.example .env   # renseigner REACT_APP_API_URL
 npm start
 ```
 
-### 8.3 Déploiement
+### 9.3 Déploiement
 
 - **Front-end** : Vercel (build automatique depuis le dépôt GitHub).
 - **Back-end** : VPS ou service Node (ex. Render, Railway) avec variables d'environnement
@@ -342,7 +393,7 @@ npm start
   d'infrastructure de l'institution.
 - Sauvegardes régulières (dump MySQL automatisé).
 
-### 8.4 Variables d'environnement (back-end)
+### 9.4 Variables d'environnement (back-end)
 
 ```
 PORT=5000
@@ -358,34 +409,44 @@ MONCASH_MODE=sandbox
 
 ---
 
-## 9. Bonnes pratiques de développement
+## 10. Risques identifiés
+
+| Risque | Impact | Mitigation |
+|---|---|---|
+| Indisponibilité de l'API MonCash | Étudiants bloqués pour payer leurs frais | Mode de secours manuel avec justificatif (RF-PAIE-6) |
+| Connectivité instable côté utilisateur | Perte de session, doubles soumissions | Pagination, boutons désactivés pendant requête, messages d'erreur explicites |
+| Erreur de saisie de note par un enseignant | Note visible immédiatement, litige étudiant | Confirmation avant validation + historique de modification |
+| Fuite de secrets (clés MonCash, JWT) | Compromission de comptes ou de paiements | Secrets uniquement en `.env`, jamais commités, rotation possible |
+
+---
+
+## 11. Feuille de route indicative
+
+| Phase | Contenu |
+|---|---|
+| **Phase 1** | Authentification, gestion des cours/programmes, structure back-end/front-end de base |
+| **Phase 2** | Notes et évaluations, tableau de bord par rôle |
+| **Phase 3** | Intégration MonCash (paiements) |
+| **Phase 4** | Messagerie, notifications, bibliothèque de ressources |
+| **Phase 5** | Durcissement sécurité, tests de charge, déploiement production |
+
+---
+
+## 12. Bonnes pratiques de développement
 
 - Respecter la structure de dossiers définie (séparation controllers / routes / models / services).
 - Utiliser des noms de branches Git explicites (`feature/`, `fix/`, `hotfix/`) et des messages de
   commit clairs.
-- Documenter chaque nouvelle route API (méthode, paramètres, réponse) dans ce document.
+- Documenter chaque nouvelle route API (méthode, paramètres, réponse) dans ce document, avec sa
+  référence `RF-*`.
 - Écrire des tests pour la logique métier critique (paiements, calcul de notes).
 - Gérer les erreurs de façon centralisée via un middleware `errorHandler`.
 
 ---
 
-## 10. Glossaire
+## 13. Documents de référence
 
-| Terme | Définition |
-|---|---|
-| JWT | JSON Web Token, format de jeton utilisé pour l'authentification |
-| API REST | Interface de programmation respectant les principes REST |
-| ORM | Object-Relational Mapping, couche d'abstraction entre code et base de données |
-| Webhook | Notification HTTP automatique envoyée par un service externe (ici, MonCash) |
-
----
-
-## 11. Documents de référence
-
-Les documents détaillés qui ont servi de base à cette spécification sont disponibles dans
-[`files/`](files/) :
-
-- [`E-UNI_Documentation_Technique.pdf`](files/E-UNI_Documentation_Technique.pdf) — documentation
-  technique complète destinée aux développeurs.
-- [`E-UNI_Manuel_Utilisation.pdf`](files/E-UNI_Manuel_Utilisation.pdf) — manuel d'utilisation
-  destiné aux étudiants, enseignants et administrateurs.
+- [`files/E-UNI_Documentation_Technique.pdf`](files/E-UNI_Documentation_Technique.pdf) —
+  documentation technique complète destinée aux développeurs.
+- [`files/E-UNI_Manuel_Utilisation.pdf`](files/E-UNI_Manuel_Utilisation.pdf) — manuel
+  d'utilisation destiné aux étudiants, enseignants et administrateurs.
