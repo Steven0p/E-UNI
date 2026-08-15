@@ -311,6 +311,9 @@ Toutes les routes protégées requièrent un jeton JWT transmis dans l'en-tête
 | POST | `/api/cours` | Créer un cours (admin/enseignant) | RF-COURS-3 |
 | PUT | `/api/cours/:id` | Modifier un cours | RF-COURS-3 |
 | DELETE | `/api/cours/:id` | Supprimer un cours | RF-COURS-3 |
+| GET | `/api/cours/:id/etudiants` | Étudiants inscrits à un cours | RF-COURS-4 |
+| GET | `/api/cours/etudiant/:id` | Cours auxquels un étudiant est inscrit | RF-DASH-1 |
+| POST | `/api/cours/:id/inscription` | Inscrire l'étudiant courant à un cours | RF-DASH-1 |
 | GET | `/api/programmes` | Liste des programmes académiques | RF-COURS-1 |
 
 ### 7.3 Notes et évaluations
@@ -330,6 +333,7 @@ Toutes les routes protégées requièrent un jeton JWT transmis dans l'en-tête
 | POST | `/api/paiements/initier` | Initier un paiement MonCash | RF-PAIE-2 |
 | GET | `/api/paiements/verifier/:reference` | Vérifier le statut d'une transaction | RF-PAIE-3 |
 | POST | `/api/paiements/webhook` | Callback de confirmation MonCash | RF-PAIE-3, RF-PAIE-4 |
+| POST | `/api/paiements/manuel` | Enregistrer un paiement manuel (admin, mode de secours) | RF-PAIE-6 |
 
 ### 7.5 Communication et ressources
 
