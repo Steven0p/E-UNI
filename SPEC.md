@@ -301,6 +301,8 @@ Toutes les routes protégées requièrent un jeton JWT transmis dans l'en-tête
 | POST | `/api/auth/login` | Connexion, retourne un token JWT | RF-AUTH-2 |
 | POST | `/api/auth/refresh` | Rafraîchissement du token | RF-AUTH-2 |
 | POST | `/api/auth/logout` | Déconnexion | RF-AUTH-4 |
+| POST | `/api/auth/forgot-password` | Demander un lien de réinitialisation de mot de passe | RF-AUTH-3 |
+| POST | `/api/auth/reset-password` | Réinitialiser le mot de passe avec un jeton valide | RF-AUTH-3 |
 
 ### 7.2 Cours et programmes
 

@@ -41,6 +41,9 @@ export default function Login() {
         </label>
         <button type="submit">Connexion</button>
         <p>
+          <Link to="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
+        </p>
+        <p>
           Pas encore de compte ? <Link to="/inscription">Créer un compte</Link>
         </p>
       </form>

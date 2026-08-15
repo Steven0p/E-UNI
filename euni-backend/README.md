@@ -29,7 +29,14 @@ npm run dev              # démarre l'API en développement (http://localhost:50
   table `refresh_tokens` (nécessaire pour `POST /api/auth/logout`).
 - Le statut d'un paiement MonCash n'est jamais déduit du seul appel webhook : il est toujours
   reconfirmé par un appel serveur-à-serveur à `RetrieveTransactionPayment` avant mise à jour.
-- Deux routes complètent le contrat d'API de `SPEC.md` pour couvrir des exigences fonctionnelles
+- `POST /api/auth/forgot-password` répond toujours le même message, que le compte existe ou non
+  (anti-énumération de comptes). Aucun service d'envoi d'e-mail (SMTP/SES/...) n'est encore
+  branché : le lien de réinitialisation est journalisé côté serveur et, hors production
+  (`NODE_ENV !== 'production'`), renvoyé directement dans la réponse pour permettre de tester le
+  flux sans infrastructure d'e-mail. Brancher un vrai envoi d'e-mail avant la mise en production.
+- `POST /api/auth/reset-password` révoque tous les jetons de rafraîchissement actifs de
+  l'utilisateur (déconnexion forcée de toutes les sessions après un changement de mot de passe).
+- Trois routes complètent le contrat d'API de `SPEC.md` pour couvrir des exigences fonctionnelles
   qui n'y étaient pas explicitement listées comme endpoints :
   - `GET /api/cours/etudiant/:id` et `POST /api/cours/:id/inscription` (RF-DASH-1)
   - `POST /api/paiements/manuel` (RF-PAIE-6, paiement de secours par un administrateur)

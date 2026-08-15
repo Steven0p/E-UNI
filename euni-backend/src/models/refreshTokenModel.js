@@ -1,9 +1,5 @@
-const crypto = require('crypto');
 const { pool } = require('../config/db');
-
-function hashToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
-}
+const hashToken = require('../utils/hashToken');
 
 async function store(utilisateurId, token, expiresAt) {
   await pool.query(
@@ -24,4 +20,11 @@ async function revoke(token) {
   await pool.query('UPDATE refresh_tokens SET revoked_at = NOW() WHERE token_hash = ?', [hashToken(token)]);
 }
 
-module.exports = { store, findValid, revoke };
+async function revokeAllForUser(utilisateurId) {
+  await pool.query(
+    'UPDATE refresh_tokens SET revoked_at = NOW() WHERE utilisateur_id = ? AND revoked_at IS NULL',
+    [utilisateurId],
+  );
+}
+
+module.exports = { store, findValid, revoke, revokeAllForUser };

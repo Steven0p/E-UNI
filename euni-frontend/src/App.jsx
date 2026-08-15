@@ -6,6 +6,8 @@ import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Cours from './pages/Cours';
 import CoursDetail from './pages/CoursDetail';
@@ -22,6 +24,8 @@ export default function App() {
     <Routes>
       <Route path="/connexion" element={<Login />} />
       <Route path="/inscription" element={<Register />} />
+      <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
+      <Route path="/reinitialiser-mot-de-passe" element={<ResetPassword />} />
       <Route
         path="/"
         element={

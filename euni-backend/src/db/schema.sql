@@ -21,6 +21,17 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Table de support pour RF-AUTH-3 (réinitialisation de mot de passe).
+CREATE TABLE IF NOT EXISTS password_resets (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  utilisateur_id INT NOT NULL,
+  token_hash VARCHAR(255) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS programmes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nom_programme VARCHAR(150) NOT NULL,

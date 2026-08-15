@@ -21,4 +21,8 @@ async function create({ nom, prenom, email, motDePasseHash, role }) {
   return findById(result.insertId);
 }
 
-module.exports = { findByEmail, findById, create };
+async function updatePassword(id, motDePasseHash) {
+  await pool.query('UPDATE utilisateurs SET mot_de_passe = ? WHERE id = ?', [motDePasseHash, id]);
+}
+
+module.exports = { findByEmail, findById, create, updatePassword };

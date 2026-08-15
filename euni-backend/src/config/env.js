@@ -29,6 +29,7 @@ function loadEnv() {
       returnUrl: process.env.MONCASH_RETURN_URL,
     },
     corsOrigin: process.env.CORS_ORIGIN || '*',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
   };
 }
 
